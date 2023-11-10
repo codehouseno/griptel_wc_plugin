@@ -60,6 +60,74 @@ function createOrderFromEDI($data)
       continue;
     }
 
+    $order_email = $orderData["billing_information"]["billing_email"];
+
+    // Check if there are any users with the billing email as user or email
+    $email = email_exists( $order_email );
+    $user = username_exists( $order_email );
+
+    // If user exists, get user id
+    if(!empty($user)) {
+      $user_id = $user;
+    } else if(!empty($email)) {
+      $user_id = $email;
+    } else {
+      // Create user
+      
+      // Random password with 12 chars
+      $random_password = wp_generate_password();
+
+      // Firstname
+      $first_name = $orderData["billing_information"]["billing_first_name"];
+   
+      // Lastname
+      $last_name = $orderData["billing_information"]["billing_last_name"];
+   
+      // Role
+      $role = 'customer';
+   
+      // Create new user with email as username, newly created password and user role
+      $user_id = wp_insert_user(
+        array(
+          'user_email' => $order_email,
+          'user_login' => $order_email,
+          'user_pass'  => $random_password,
+          'first_name' => $first_name,
+          'last_name'  => $last_name,
+          'role'       => $role,
+        )
+      );
+   
+      // (Optional) WC guest customer identification
+      update_user_meta( $user_id, 'guest', 'yes' );
+   
+      // User's billing data
+      update_user_meta( $user_id, 'billing_address_1', $orderData["billing_information"]["billing_address_1"] );
+      update_user_meta( $user_id, 'billing_address_2', $orderData["billing_information"]["billing_address_2"] );
+      update_user_meta( $user_id, 'billing_city',  $orderData["billing_information"]["billing_city"] );
+      update_user_meta( $user_id, 'billing_company', $orderData["billing_information"]["billing_company"] );
+      update_user_meta( $user_id, 'billing_country', $orderData["billing_information"]["billing_country"] );
+      update_user_meta( $user_id, 'billing_email', $order_email);
+      update_user_meta( $user_id, 'billing_first_name', $firstName );
+      update_user_meta( $user_id, 'billing_last_name', $last_name);
+      update_user_meta( $user_id, 'billing_phone', $orderData["billing_information"]["billing_phone"]);
+      update_user_meta( $user_id, 'billing_postcode', $orderData["billing_information"]["billing_postcode"] );
+      update_user_meta( $user_id, 'billing_organization_number', $orderData["organization_number"] );
+   
+               // User's shipping data
+      update_user_meta( $user_id, 'shipping_address_1', $orderData["shipping_information"]["shipping_address_1"] );
+      update_user_meta( $user_id, 'shipping_address_2', $orderData["shipping_information"]["shipping_address_2"] );
+      update_user_meta( $user_id, 'shipping_city', $orderData["shipping_information"]["shipping_city"] );
+      update_user_meta( $user_id, 'shipping_company', $orderData["shipping_information"]["shipping_company"]);
+      update_user_meta( $user_id, 'shipping_country', $orderData["shipping_information"]["shipping_country"] );
+      update_user_meta( $user_id, 'shipping_first_name', $orderData["shipping_information"]["shipping_first_name"] );
+      update_user_meta( $user_id, 'shipping_last_name', $orderData["shipping_information"]["shipping_last_name"] );
+      update_user_meta( $user_id, 'shipping_postcode', $orderData["shipping_information"]["shipping_postcode"] );
+   
+      // Link past orders to this newly created customer
+      wc_update_new_customer_past_orders( $user_id );
+    }
+
 
     // Get customer name
     $customerId = $orderData["customerId"];
@@ -73,7 +141,7 @@ function createOrderFromEDI($data)
     $newOrder = wc_create_order();
 
     // Set customer // Temp disabled
-    // $newOrder->set_customer_id(1);
+    $newOrder->set_customer_id($user_id);
 
     // Set billing_information address
     $newOrder->set_billing_first_name($orderData["billing_information"]["billing_first_name"]);
@@ -87,6 +155,15 @@ function createOrderFromEDI($data)
     $newOrder->set_billing_country($orderData["billing_information"]["billing_country"]);
     $newOrder->set_billing_phone($orderData["billing_information"]["billing_phone"]);
     $newOrder->set_billing_email($orderData["billing_information"]["billing_email"]);
+    // $newOrder->set_billing_organization_number($orderData["organization_number"]);
+
+    // set custom meta data organization_number
+    $newOrder->update_meta_data("_billing_organisasjonsnummer", $orderData["organization_number"]);
+
+    if(isset($discountKey)) {
+      $newOrder->update_meta_data("_billing_prisavtale", $customerId);
+    }
+    // set custom meta data _billing_prisavtale
 
     // Set shipping address
     $newOrder->set_shipping_first_name($orderData["shipping_information"]["shipping_first_name"]);
@@ -98,6 +175,18 @@ function createOrderFromEDI($data)
     $newOrder->set_shipping_state($orderData["shipping_information"]["shipping_state"]);
     $newOrder->set_shipping_postcode($orderData["shipping_information"]["shipping_postcode"]);
     $newOrder->set_shipping_country($orderData["shipping_information"]["shipping_country"]);
+
+    // Set currency
+    // $newOrder->set_currency($orderData["currency"]);
+
+    // set payment method
+    $newOrder->set_payment_method("cod");
+
+    // Set payment method title
+    $newOrder->set_payment_method_title("Invoice");
+
+    // Set order status
+    $newOrder->set_status("processing");
 
     // Add products by looping through EDI file
     foreach ($orderData["line_items"] as $product) {
@@ -141,6 +230,7 @@ function createOrderFromEDI($data)
         'product' => $product_obj,
         'quantity' => $quantity,
         'total' => $unit_price * $quantity,
+        // currency is optional, and defaults to the order's currency if not set
       ));
         
       // Add the line item to the order
