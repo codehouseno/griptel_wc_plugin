@@ -14,3 +14,5 @@ Pluginen avviser pr nå produkter, som har en ugyldig sku.
 Det mangler (3 minutters jobb) å sende dataen fra integrasjonen til plugin. Dette avventes til plugin er ferdig, så jeg slipper å reserialisere dataene flere ganger, i tilfelle endringer.
 Det kan potensielt håndteres annerledes hvordan vi gjør det med ugyldige sku. Forslag kan være å se om det kan lages bare et custom line item, så i hvertfall sku + quanity blir bevart på ordrelinjen.
 Det settes ikke en kundeid på ordren, så alt kommer som guest nå. Tenker det er bedre at sier hvordan du vil ha det.
+
+~Current Version:2.0~
