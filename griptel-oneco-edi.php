@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Griptel OneCo EDI
  * Description:       Creates woocommerce orders from EDI files
- * Version:           0.0.2
+ * Version:           1.0.0
  * Requires at least: 5.7
  * Requires PHP:      7.4
  * Author:            Codehouse AS
