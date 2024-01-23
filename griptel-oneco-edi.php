@@ -25,7 +25,12 @@ function createOrderFromEDI($data)
     "ICE" => "regular_price_ice", 
     "TELENOR" => "regular_price_telenor",
     "NOKIA" => "regular_price_nokia",
-    "ONECO" => "regular_price_oneco"
+    "ONECO" => "regular_price_oneco",
+    "telia" => "regular_price_telia", 
+    "ice" => "regular_price_ice", 
+    "telenor" => "regular_price_telenor",
+    "nokia" => "regular_price_nokia",
+    "oneco" => "regular_price_oneco"
   ];
 
   // Create a return object for logging
@@ -114,7 +119,7 @@ function createOrderFromEDI($data)
       update_user_meta( $user_id, 'billing_postcode', $orderData["billing_information"]["billing_postcode"] );
       update_user_meta( $user_id, 'billing_organization_number', $orderData["organization_number"] );
    
-               // User's shipping data
+      // User's shipping data
       update_user_meta( $user_id, 'shipping_address_1', $orderData["shipping_information"]["shipping_address_1"] );
       update_user_meta( $user_id, 'shipping_address_2', $orderData["shipping_information"]["shipping_address_2"] );
       update_user_meta( $user_id, 'shipping_city', $orderData["shipping_information"]["shipping_city"] );
@@ -160,10 +165,10 @@ function createOrderFromEDI($data)
     // set custom meta data organization_number
     $newOrder->update_meta_data("_billing_organisasjonsnummer", $orderData["organization_number"]);
 
+    // set custom meta data _billing_prisavtale
     if(isset($discountKey)) {
       $newOrder->update_meta_data("_billing_prisavtale", $customerId);
     }
-    // set custom meta data _billing_prisavtale
 
     // Set shipping address
     $newOrder->set_shipping_first_name($orderData["shipping_information"]["shipping_first_name"]);
@@ -187,6 +192,14 @@ function createOrderFromEDI($data)
 
     // Set order status
     $newOrder->set_status("processing");
+
+    // if we have a value on order_reference, use that, else use order_note, else use empty string
+    $orderReference = $orderData["order_reference"] ?? $orderData["order_merket"] ?? "";
+    $orderMerket = $orderData["order_merket"] ?? "";
+
+    // Set order reference number
+    $newOrder->update_meta_data("ordrereferanse", $orderReference);
+    $newOrder->update_meta_data("merket", $orderMerket);
 
     // Add products by looping through EDI file
     foreach ($orderData["line_items"] as $product) {
